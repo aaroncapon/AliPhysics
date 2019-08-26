@@ -54,9 +54,16 @@ ClassImp(AliAnalysisTaskLMeeCocktailMC)
 
 //________________________________________________________________________
 AliAnalysisTaskLMeeCocktailMC::AliAnalysisTaskLMeeCocktailMC(): AliAnalysisTaskSE(),
-  fOutputContainer(NULL),
+  fArr(0x0),
+  fArrResoPt(0x0),
+  fArrResoEta(0x0),
+  fArrResoPhi_Pos(0x0),
+  fArrResoPhi_Neg(0x0),
   fInputEvent(NULL),
   fMCEvent(NULL),
+  fOutputContainer(NULL),
+  fParticleList(NULL),
+  fParticleListNames(NULL),
   fHistNEvents(NULL),
   fhwEffpT(NULL),
   fhwMultpT(NULL),
@@ -64,13 +71,11 @@ AliAnalysisTaskLMeeCocktailMC::AliAnalysisTaskLMeeCocktailMC(): AliAnalysisTaskS
   fhwMultpT2(NULL),
   fhwMultmT2(NULL),
   fh_DCAtemplates(NULL),
-  fArr(0x0),
-  fArrResoPt(0x0),
-  fArrResoEta(0x0),
-  fArrResoPhi_Pos(0x0),
-  fArrResoPhi_Neg(0x0),
   ffVPHpT(0x0),
   fhKW(NULL),
+  fCustomBinning(kFALSE),
+  fMassBins(),
+  fPairPtBins(),
   fmee_orig(NULL),
   fpteevsmee_orig(NULL),
   fmotherpT_orig(NULL),
@@ -151,8 +156,6 @@ AliAnalysisTaskLMeeCocktailMC::AliAnalysisTaskLMeeCocktailMC(): AliAnalysisTaskS
   fFileVPH(0),
   fResolDataSetName(""),
   teeTTree(NULL),
-  fParticleList(NULL),
-  fParticleListNames(NULL),
   fIsMC(1),
   fMaxEta(2),
   fMinPt(0),
@@ -168,9 +171,16 @@ AliAnalysisTaskLMeeCocktailMC::AliAnalysisTaskLMeeCocktailMC(): AliAnalysisTaskS
 //________________________________________________________________________
 AliAnalysisTaskLMeeCocktailMC::AliAnalysisTaskLMeeCocktailMC(const char *name):
   AliAnalysisTaskSE(name),
-  fOutputContainer(NULL),
+  fArr(0x0),
+  fArrResoPt(0x0),
+  fArrResoEta(0x0),
+  fArrResoPhi_Pos(0x0),
+  fArrResoPhi_Neg(0x0),
   fInputEvent(NULL),
   fMCEvent(NULL),
+  fOutputContainer(NULL),
+  fParticleList(NULL),
+  fParticleListNames(NULL),
   fHistNEvents(NULL),
   fhwEffpT(NULL),
   fhwMultpT(NULL),
@@ -178,13 +188,11 @@ AliAnalysisTaskLMeeCocktailMC::AliAnalysisTaskLMeeCocktailMC(const char *name):
   fhwMultpT2(NULL),
   fhwMultmT2(NULL),
   fh_DCAtemplates(NULL),
-  fArr(0x0),
-  fArrResoPt(0x0),
-  fArrResoEta(0x0),
-  fArrResoPhi_Pos(0x0),
-  fArrResoPhi_Neg(0x0),
   ffVPHpT(0x0),
   fhKW(NULL),
+  fCustomBinning(kFALSE),
+  fMassBins(),
+  fPairPtBins(),
   fmee_orig(NULL),
   fpteevsmee_orig(NULL),
   fmotherpT_orig(NULL),
@@ -265,8 +273,6 @@ AliAnalysisTaskLMeeCocktailMC::AliAnalysisTaskLMeeCocktailMC(const char *name):
   fFileVPH(0),
   fResolDataSetName(""),
   teeTTree(NULL),
-  fParticleList(NULL),
-  fParticleListNames(NULL),
   fIsMC(1),
   fMaxEta(2),
   fMinPt(0),
@@ -510,6 +516,21 @@ void AliAnalysisTaskLMeeCocktailMC::UserCreateOutputObjects(){
   Int_t   histBinRap  = 240;
   Float_t histMinRap  = -1.2;
   Float_t histMaxRap  =  1.2;
+  // Set linear bins if custom not requested
+  // Using hardcoded bins for now. TODO: enable custom linear binning
+  if(!fCustomBinning){
+
+    const Float_t stepSizeMass = (histMaxM - histMinM)/histBinM;
+    for(Int_t i = 0; i <= histBinM; ++i){
+      fMassBins.push_back(histMinM + (i*stepSizeMass));
+    }
+    const Float_t stepSizePairPt = (histMaxPt -histMinPt)/histBinPt;
+    for(Int_t i = 0; i <= histBinPt; ++i){
+      fPairPtBins.push_back(histMinPt + (i*stepSizePairPt));
+    }
+  }
+
+  // DCA binning
   const Int_t nbm = 8;
   Double_t mbins[nbm+1] = {0.,0.08,0.14,0.2,1.1,2.7,2.8,3.2,5.0};
   const Int_t nbDCA=11;
@@ -518,15 +539,15 @@ void AliAnalysisTaskLMeeCocktailMC::UserCreateOutputObjects(){
   Double_t ptbins[nbpt+1]= {0.,0.5,1,1.5,2.,2.5,3.,3.5,4.,4.5,5.,5.5,6.,6.5,7.,7.5,8.};
 
   fmee_orig = new TH1F*[nInputParticles+1];
-  fmee_orig[nInputParticles] = new TH1F("mee_orig","mee_orig",histBinM,histMinM,histMaxM);
+  fmee_orig[nInputParticles] = new TH1F("mee_orig","mee_orig", fMassBins.size()-1, fMassBins.data());
   fmee_orig[nInputParticles]->Sumw2();
   fOutputContainer->Add(fmee_orig[nInputParticles]);
   fpteevsmee_orig = new TH2F*[nInputParticles+1];
-  fpteevsmee_orig[nInputParticles] = new TH2F("pteevsmee_orig","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+  fpteevsmee_orig[nInputParticles] = new TH2F("pteevsmee_orig","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
   fpteevsmee_orig[nInputParticles]->Sumw2();
   fOutputContainer->Add(fpteevsmee_orig[nInputParticles]);
   fmotherpT_orig = new TH1F*[nInputParticles+1];
-  fmotherpT_orig[nInputParticles] = new TH1F("motherpT_orig","motherpT_orig",histBinPt,histMinPt,histMaxPt);
+  fmotherpT_orig[nInputParticles] = new TH1F("motherpT_orig","motherpT_orig", fPairPtBins.size()-1, fPairPtBins.data());
   fmotherpT_orig[nInputParticles]->Sumw2();
   fOutputContainer->Add(fmotherpT_orig[nInputParticles]);
   fphi_orig = new TH1F*[nInputParticles+1];
@@ -538,7 +559,7 @@ void AliAnalysisTaskLMeeCocktailMC::UserCreateOutputObjects(){
   frap_orig[nInputParticles]->Sumw2();
   fOutputContainer->Add(frap_orig[nInputParticles]);
   for(Int_t i=0; i<nInputParticles; i++){
-   fmee_orig[i] = new TH1F(Form("mee_orig_%s",fParticleListNames[i].Data()),Form("mee_orig_%s",fParticleListNames[i].Data()),histBinM,histMinM,histMaxM);
+   fmee_orig[i] = new TH1F(Form("mee_orig_%s",fParticleListNames[i].Data()),Form("mee_orig_%s",fParticleListNames[i].Data()), fMassBins.size()-1, fMassBins.data());
    fmee_orig[i]->Sumw2();
    fOutputContainer->Add(fmee_orig[i]);
    fphi_orig[i] = new TH1F(Form("phi_orig_%s",fParticleListNames[i].Data()),Form("phi_orig_%s",fParticleListNames[i].Data()),histBinPhi,histMinPhi,histMaxPhi);
@@ -547,20 +568,20 @@ void AliAnalysisTaskLMeeCocktailMC::UserCreateOutputObjects(){
    frap_orig[i] = new TH1F(Form("rap_orig_%s",fParticleListNames[i].Data()),Form("rap_orig_%s",fParticleListNames[i].Data()),histBinRap,histMinRap,histMaxRap);
    frap_orig[i]->Sumw2();
    fOutputContainer->Add(frap_orig[i]);
-   fpteevsmee_orig[i] = new TH2F(Form("pteevsmee_orig_%s",fParticleListNames[i].Data()),Form("%s;#it{m}_{ee};#it{p}_{T,ee}",fParticleListNames[i].Data()),histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+   fpteevsmee_orig[i] = new TH2F(Form("pteevsmee_orig_%s",fParticleListNames[i].Data()),Form("%s;#it{m}_{ee};#it{p}_{T,ee}",fParticleListNames[i].Data()), fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
    fpteevsmee_orig[i]->Sumw2();
    fOutputContainer->Add(fpteevsmee_orig[i]);
-   fmotherpT_orig[i] = new TH1F(Form("motherpT_orig_%s",fParticleListNames[i].Data()),Form("motherpT_orig_%s",fParticleListNames[i].Data()),histBinPt,histMinPt,histMaxPt);
+   fmotherpT_orig[i] = new TH1F(Form("motherpT_orig_%s",fParticleListNames[i].Data()),Form("motherpT_orig_%s",fParticleListNames[i].Data()), fPairPtBins.size()-1, fPairPtBins.data());
    fmotherpT_orig[i]->Sumw2();
    fOutputContainer->Add(fmotherpT_orig[i]);
   }
 
   fmee = new TH1F*[nInputParticles+1];
-  fmee[nInputParticles] = new TH1F("mee","mee",histBinM,histMinM,histMaxM);
+  fmee[nInputParticles] = new TH1F("mee","mee", fMassBins.size()-1, fMassBins.data());
   fmee[nInputParticles]->Sumw2();
   fOutputContainer->Add(fmee[nInputParticles]);
   fpteevsmee = new TH2F*[nInputParticles+1];
-  fpteevsmee[nInputParticles] = new TH2F("pteevsmee","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+  fpteevsmee[nInputParticles] = new TH2F("pteevsmee","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
   fpteevsmee[nInputParticles]->Sumw2();
   fOutputContainer->Add(fpteevsmee[nInputParticles]);
   fphi = new TH1F*[nInputParticles+1];
@@ -572,7 +593,7 @@ void AliAnalysisTaskLMeeCocktailMC::UserCreateOutputObjects(){
   frap[nInputParticles]->Sumw2();
   fOutputContainer->Add(frap[nInputParticles]);
   for(Int_t i=0; i<nInputParticles; i++){
-   fmee[i] = new TH1F(Form("mee_%s",fParticleListNames[i].Data()),Form("mee_%s",fParticleListNames[i].Data()),histBinM,histMinM,histMaxM);
+   fmee[i] = new TH1F(Form("mee_%s",fParticleListNames[i].Data()),Form("mee_%s",fParticleListNames[i].Data()), fMassBins.size()-1, fMassBins.data());
    fmee[i]->Sumw2();
    fOutputContainer->Add(fmee[i]);
    fphi[i] = new TH1F(Form("phi_%s",fParticleListNames[i].Data()),Form("phi_%s",fParticleListNames[i].Data()),histBinPhi,histMinPhi,histMaxPhi);
@@ -581,7 +602,7 @@ void AliAnalysisTaskLMeeCocktailMC::UserCreateOutputObjects(){
    frap[i] = new TH1F(Form("rap_%s",fParticleListNames[i].Data()),Form("rap_%s",fParticleListNames[i].Data()),histBinRap,histMinRap,histMaxRap);
    frap[i]->Sumw2();
    fOutputContainer->Add(frap[i]);
-   fpteevsmee[i] = new TH2F(Form("pteevsmee_%s",fParticleListNames[i].Data()),Form("%s;#it{m}_{ee};#it{p}_{T,ee}",fParticleListNames[i].Data()),histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+   fpteevsmee[i] = new TH2F(Form("pteevsmee_%s",fParticleListNames[i].Data()),Form("%s;#it{m}_{ee};#it{p}_{T,ee}",fParticleListNames[i].Data()), fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
    fpteevsmee[i]->Sumw2();
    fOutputContainer->Add(fpteevsmee[i]);
   }
@@ -593,57 +614,57 @@ void AliAnalysisTaskLMeeCocktailMC::UserCreateOutputObjects(){
   fOutputContainer->Add(fDCAeevsptee);
 
   fmee_orig_wALT = new TH1F*[nInputParticles+1];
-  fmee_orig_wALT[nInputParticles] = new TH1F("mee_orig_wALT","mee_orig_wALT",histBinM,histMinM,histMaxM);
+  fmee_orig_wALT[nInputParticles] = new TH1F("mee_orig_wALT","mee_orig_wALT", fMassBins.size()-1, fMassBins.data());
   fmee_orig_wALT[nInputParticles]->Sumw2();
   if(fALTweightType>0)fOutputContainer->Add(fmee_orig_wALT[nInputParticles]);
   fpteevsmee_orig_wALT = new TH2F*[nInputParticles+1];
-  fpteevsmee_orig_wALT[nInputParticles] = new TH2F("pteevsmee_orig_wALT","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+  fpteevsmee_orig_wALT[nInputParticles] = new TH2F("pteevsmee_orig_wALT","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
   fpteevsmee_orig_wALT[nInputParticles]->Sumw2();
   if(fALTweightType>0)fOutputContainer->Add(fpteevsmee_orig_wALT[nInputParticles]);
   fmotherpT_orig_wALT = new TH1F*[nInputParticles+1];
-  fmotherpT_orig_wALT[nInputParticles] = new TH1F("motherpT_orig_wALT","motherpT_orig_wALT",histBinPt,histMinPt,histMaxPt);
+  fmotherpT_orig_wALT[nInputParticles] = new TH1F("motherpT_orig_wALT","motherpT_orig_wALT", fPairPtBins.size()-1, fPairPtBins.data());
   fmotherpT_orig_wALT[nInputParticles]->Sumw2();
   if(fALTweightType>0)fOutputContainer->Add(fmotherpT_orig_wALT[nInputParticles]);
   for(Int_t i=0; i<nInputParticles; i++){
-   fmee_orig_wALT[i] = new TH1F(Form("mee_orig_wALT_%s",fParticleListNames[i].Data()),Form("mee_orig_wALT_%s",fParticleListNames[i].Data()),histBinM,histMinM,histMaxM);
+   fmee_orig_wALT[i] = new TH1F(Form("mee_orig_wALT_%s",fParticleListNames[i].Data()),Form("mee_orig_wALT_%s",fParticleListNames[i].Data()), fMassBins.size()-1, fMassBins.data());
    fmee_orig_wALT[i]->Sumw2();
    if(fALTweightType>0)fOutputContainer->Add(fmee_orig_wALT[i]);
-   fpteevsmee_orig_wALT[i] = new TH2F(Form("pteevsmee_orig_wALT_%s",fParticleListNames[i].Data()),Form("%s;#it{m}_{ee};#it{p}_{T,ee}",fParticleListNames[i].Data()),histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+   fpteevsmee_orig_wALT[i] = new TH2F(Form("pteevsmee_orig_wALT_%s",fParticleListNames[i].Data()),Form("%s;#it{m}_{ee};#it{p}_{T,ee}",fParticleListNames[i].Data()), fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
    fpteevsmee_orig_wALT[i]->Sumw2();
    if(fALTweightType>0)fOutputContainer->Add(fpteevsmee_orig_wALT[i]);
-   fmotherpT_orig_wALT[i] = new TH1F(Form("motherpT_orig_wALT_%s",fParticleListNames[i].Data()),Form("motherpT_orig_wALT_%s",fParticleListNames[i].Data()),histBinPt,histMinPt,histMaxPt);
+   fmotherpT_orig_wALT[i] = new TH1F(Form("motherpT_orig_wALT_%s",fParticleListNames[i].Data()),Form("motherpT_orig_wALT_%s",fParticleListNames[i].Data()), fPairPtBins.size()-1, fPairPtBins.data());
    fmotherpT_orig_wALT[i]->Sumw2();
    if(fALTweightType>0)fOutputContainer->Add(fmotherpT_orig_wALT[i]);
   }
   fmee_wALT = new TH1F*[nInputParticles+1];
-  fmee_wALT[nInputParticles] = new TH1F("mee_wALT","mee_wALT",histBinM,histMinM,histMaxM);
+  fmee_wALT[nInputParticles] = new TH1F("mee_wALT","mee_wALT", fMassBins.size()-1, fMassBins.data());
   fmee_wALT[nInputParticles]->Sumw2();
   if(fALTweightType>0)fOutputContainer->Add(fmee_wALT[nInputParticles]);
   fpteevsmee_wALT = new TH2F*[nInputParticles+1];
-  fpteevsmee_wALT[nInputParticles] = new TH2F("pteevsmee_wALT","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+  fpteevsmee_wALT[nInputParticles] = new TH2F("pteevsmee_wALT","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
   fpteevsmee_wALT[nInputParticles]->Sumw2();
   if(fALTweightType>0)fOutputContainer->Add(fpteevsmee_wALT[nInputParticles]);
   for(Int_t i=0; i<nInputParticles; i++){
-   fmee_wALT[i] = new TH1F(Form("mee_wALT_%s",fParticleListNames[i].Data()),Form("mee_wALT_%s",fParticleListNames[i].Data()),histBinM,histMinM,histMaxM);
+   fmee_wALT[i] = new TH1F(Form("mee_wALT_%s",fParticleListNames[i].Data()),Form("mee_wALT_%s",fParticleListNames[i].Data()), fMassBins.size()-1, fMassBins.data());
    fmee_wALT[i]->Sumw2();
    if(fALTweightType>0)fOutputContainer->Add(fmee_wALT[i]);
-   fpteevsmee_wALT[i] = new TH2F(Form("pteevsmee_wALT_%s",fParticleListNames[i].Data()),Form("%s;#it{m}_{ee};#it{p}_{T,ee}",fParticleListNames[i].Data()),histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+   fpteevsmee_wALT[i] = new TH2F(Form("pteevsmee_wALT_%s",fParticleListNames[i].Data()),Form("%s;#it{m}_{ee};#it{p}_{T,ee}",fParticleListNames[i].Data()), fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
    fpteevsmee_wALT[i]->Sumw2();
    if(fALTweightType>0)fOutputContainer->Add(fpteevsmee_wALT[i]);
   }
 
-  fULS_orig = new TH2F("ULS_orig","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
-  fLSpp_orig = new TH2F("LSpp_orig","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
-  fLSmm_orig = new TH2F("LSmm_orig","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+  fULS_orig = new TH2F("ULS_orig","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
+  fLSpp_orig = new TH2F("LSpp_orig","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
+  fLSmm_orig = new TH2F("LSmm_orig","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
   fULS_orig->Sumw2();
   fLSpp_orig->Sumw2();
   fLSmm_orig->Sumw2();
   fOutputContainer->Add(fULS_orig);
   fOutputContainer->Add(fLSpp_orig);
   fOutputContainer->Add(fLSmm_orig);
-  fULS = new TH2F("ULS","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
-  fLSpp = new TH2F("LSpp","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
-  fLSmm = new TH2F("LSmm","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}",histBinM,histMinM,histMaxM,histBinPt,histMinPt,histMaxPt);
+  fULS = new TH2F("ULS","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
+  fLSpp = new TH2F("LSpp","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
+  fLSmm = new TH2F("LSmm","ptvsmee;#it{m}_{ee};#it{p}_{T,ee}", fMassBins.size()-1, fMassBins.data(), fPairPtBins.size()-1, fPairPtBins.data());
   fULS->Sumw2();
   fLSpp->Sumw2();
   fLSmm->Sumw2();
@@ -685,7 +706,7 @@ void AliAnalysisTaskLMeeCocktailMC::ProcessMCParticles(){
   Int_t Skip2ndLeg=0;
 
   // Loop over all primary MC particle  
-  for(UInt_t i = 0; i < fMCEvent->GetNumberOfTracks(); i++) {
+  for(Int_t i = 0; i < fMCEvent->GetNumberOfTracks(); i++) {
 
    //LS and ULS spectra
    //------------------
@@ -731,11 +752,11 @@ void AliAnalysisTaskLMeeCocktailMC::ProcessMCParticles(){
 
     //get the mother
     Bool_t hasMother            = kFALSE;
-    Bool_t particleIsPrimary    = kTRUE;
+    /* Bool_t particleIsPrimary    = kTRUE; */
     //cout << i << "\t"<< particle->Particle(0) << endl;
     if (particle->Particle()->GetMother(0)>-1){
       hasMother = kTRUE;
-      particleIsPrimary = kFALSE;
+      /* particleIsPrimary = kFALSE; */
     }
     AliVParticle* motherParticle   = NULL;
     AliVParticle* dau3Particle   = NULL;

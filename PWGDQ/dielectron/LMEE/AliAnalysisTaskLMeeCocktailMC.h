@@ -29,6 +29,11 @@ class AliAnalysisTaskLMeeCocktailMC : public AliAnalysisTaskSE {
     void SetALTweight(Int_t ALTweightType = 1){fALTweightType = ALTweightType;}
     void SetResFileName(TString name){ fResolDataSetName = name; }
 
+    // Set custom mass and pairPt bins 
+    void UseCutstomBinning(Bool_t answer){ fCustomBinning = answer;}
+    void SetCustomMassBins(std::vector<Float_t> bins)  { fMassBins   = bins;}
+    void SetCustomPairPtBins(std::vector<Float_t> bins){ fPairPtBins = bins;}
+
     // For resolution smearing (from Theos LightFlavorGenerator)
     TObjArray       *fArr;
     TObjArray       *fArrResoPt;
@@ -67,6 +72,10 @@ class AliAnalysisTaskLMeeCocktailMC : public AliAnalysisTaskSE {
     TF1* ffVPHpT;
     TH1F* fhKW;
 
+    // Option to use non standard binning in mass and pair pT
+    Bool_t fCustomBinning;
+    std::vector<Float_t> fMassBins;
+    std::vector<Float_t> fPairPtBins;
     // output histograms
     // before smearing+acceptance cuts:
     TH1F** fmee_orig;
