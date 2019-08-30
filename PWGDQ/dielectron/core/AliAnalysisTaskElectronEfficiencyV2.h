@@ -144,6 +144,12 @@ public:
    // Track cuts setter
    void   AddTrackCuts(AliAnalysisFilter* filter) {fTrackCuts.push_back(filter);}
 
+   // Only applied to reconstructed ULS pairs after cut
+   // Useful for simplifying final efficiency calculation
+   void AddPhiVcut(Float_t massLim = 0.1 , Float_t phiVlim = 2);
+
+   Float_t CalcPhiV(const TLorentzVector& part1, const TLorentzVector& part2) const;
+
   class Particle{
   public:
     Particle() :
@@ -185,7 +191,7 @@ private:
 
   void    SetPIDResponse(AliPIDResponse *fPIDRespIn)        {fPIDResponse = fPIDRespIn;}
   void    CheckSingleLegMCsignals(std::vector<Bool_t>& vec, const int track);
-  void    CheckPairMCsignals(std::vector<Bool_t>& vec, AliVParticle* part1, AliVParticle* part2);
+  void    CheckPairMCsignals(std::vector<Bool_t>& vec, AliVParticle* part1, AliVParticle* part2); //why?
   bool    CheckGenerator(int trackID, std::vector<unsigned int> vecHashes);
   void    CheckIfFromMotherWithDielectronAsDaughter(Particle& part);
   Bool_t  CheckIfOneIsTrue(std::vector<Bool_t>& vec);
@@ -353,6 +359,11 @@ private:
   TH1* fPostPIDWdthCorrITS;      // post pid correction object for widths in ITS
   TH1* fPostPIDCntrdCorrTOF;     // post pid correction object for centroids in TOF
   TH1* fPostPIDWdthCorrTOF;      // post pid correction object for widths in TOF
+
+  Bool_t applyPhiVcut;
+  Float_t phiVmassCut;
+  Float_t phiVcut;
+  TVector3 mag_field;
 
   Bool_t run1analysis;
 

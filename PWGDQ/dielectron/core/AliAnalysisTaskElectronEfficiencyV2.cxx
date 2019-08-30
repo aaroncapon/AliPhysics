@@ -90,7 +90,11 @@ AliAnalysisTaskElectronEfficiencyV2::AliAnalysisTaskElectronEfficiencyV2(): AliA
                                                                               , fGenNegPart(), fGenPosPart(), fRecNegPart(), fRecPosPart()
                                                                               , fDoCocktailWeighting(false), fCocktailFilename(""), fCocktailFilenameFromAlien(""), fCocktailFile(0x0)
                                                                               , fPtPion(0x0), fPtEta(0x0), fPtEtaPrime(0x0), fPtRho(0x0), fPtOmega(0x0), fPtPhi(0x0), fPtJPsi(0x0),
-                                                                              fPostPIDCntrdCorrTPC(0x0), fPostPIDWdthCorrTPC(0x0), fPostPIDCntrdCorrITS(0x0), fPostPIDWdthCorrITS(0x0), fPostPIDCntrdCorrTOF(0x0), fPostPIDWdthCorrTOF(0x0)
+                                                                              fPostPIDCntrdCorrTPC(0x0), fPostPIDWdthCorrTPC(0x0), fPostPIDCntrdCorrITS(0x0), fPostPIDWdthCorrITS(0x0), fPostPIDCntrdCorrTOF(0x0), fPostPIDWdthCorrTOF(0x0),
+                                                                              applyPhiVcut(kFALSE),
+                                                                              phiVmassCut(-99),
+                                                                              phiVcut(-99),
+                                                                              mag_field()
 {
 // ROOT IO constructor , don ’t allocate memory here !
 }
@@ -122,8 +126,11 @@ AliAnalysisTaskElectronEfficiencyV2::AliAnalysisTaskElectronEfficiencyV2(const c
                                                                               , fGenNegPart(), fGenPosPart(), fRecNegPart(), fRecPosPart()
                                                                               , fDoCocktailWeighting(false), fCocktailFilename(""), fCocktailFilenameFromAlien(""), fCocktailFile(0x0)
                                                                               , fPtPion(0x0), fPtEta(0x0), fPtEtaPrime(0x0), fPtRho(0x0), fPtOmega(0x0), fPtPhi(0x0), fPtJPsi(0x0),
-                                                                              fPostPIDCntrdCorrTPC(0x0), fPostPIDWdthCorrTPC(0x0), fPostPIDCntrdCorrITS(0x0), fPostPIDWdthCorrITS(0x0), fPostPIDCntrdCorrTOF(0x0), fPostPIDWdthCorrTOF(0x0)
-
+                                                                              fPostPIDCntrdCorrTPC(0x0), fPostPIDWdthCorrTPC(0x0), fPostPIDCntrdCorrITS(0x0), fPostPIDWdthCorrITS(0x0), fPostPIDCntrdCorrTOF(0x0), fPostPIDWdthCorrTOF(0x0),
+                                                                              applyPhiVcut(kFALSE),
+                                                                              phiVmassCut(-99),
+                                                                              phiVcut(-99),
+                                                                              mag_field()
 {
   DefineInput (0, TChain::Class());
   DefineOutput (1, TList::Class());
@@ -768,6 +775,11 @@ void AliAnalysisTaskElectronEfficiencyV2::UserExec(Option_t* option){
   fHistNTracks->Fill(nTracks);
 
 
+    if(fMC->GetMagneticField() > 0){
+      mag_field[2] = 1;
+    }else{
+      mag_field[2] = -1;
+    }
   // ######################################################
   // ######################################################
   // ######################################################
@@ -1311,15 +1323,25 @@ void AliAnalysisTaskElectronEfficiencyV2::UserExec(Option_t* option){
 
           for (unsigned int i = 0; i < fRecNegPart[neg_i].isMCSignal.size(); ++i){
             // if (fRecNegPart[neg_i].isMCSignal[i] == kTRUE && fRecPosPart[pos_i].isMCSignal[i] == kTRUE){
-            if (fRecNegPart[neg_i].isMCSignal[i] == true && fRecPosPart[pos_i].isMCSignal[i] == true &&
-                fRecNegPart[neg_i].DielectronPairFromSameMother[i] == false && fRecPosPart[pos_i].DielectronPairFromSameMother[i] == false){
-              for (unsigned int j = 0; j < fRecNegPart[neg_i].isReconstructed.size(); ++j){
-                if (fRecNegPart[neg_i].isReconstructed[j] == kTRUE && fRecPosPart[pos_i].isReconstructed[j] == kTRUE){
-                  if (!fDeactivateLS) {
-                    fHistRecPair_ULSandLS[j * 3 * fSingleLegMCSignal.size() + 3 * i]->Fill(mass, pairpt, centralityWeight);
-                  }
-                  else {
-                    fHistRecPair_ULSandLS[j * 1 * fSingleLegMCSignal.size() + 1 * i]->Fill(mass, pairpt, centralityWeight);
+            if (fRecNegPart[neg_i].isMCSignal[i] == true &&
+                fRecPosPart[pos_i].isMCSignal[i] == true &&
+                fRecNegPart[neg_i].DielectronPairFromSameMother[i] == false &&
+                fRecPosPart[pos_i].DielectronPairFromSameMother[i] == false){
+                for (unsigned int j = 0; j < fRecNegPart[neg_i].isReconstructed.size(); ++j){
+                  if (fRecNegPart[neg_i].isReconstructed[j] == kTRUE && fRecPosPart[pos_i].isReconstructed[j] == kTRUE){
+                    if (!fDeactivateLS) {
+                      fHistRecPair_ULSandLS[j * 3 * fSingleLegMCSignal.size() + 3 * i]->Fill(mass, pairpt, centralityWeight);
+                    }
+                    else {
+                      Float_t phiV = CalcPhiV(Lvec1, Lvec2);
+                      if(!applyPhiVcut){
+                        fHistRecPair_ULSandLS[j * 1 * fSingleLegMCSignal.size() + 1 * i]->Fill(mass, pairpt, centralityWeight);
+                      }else{
+                        if(!((phiV > phiVcut) && (mass < phiVmassCut))){
+                          fHistRecPair_ULSandLS[j * 1 * fSingleLegMCSignal.size() + 1 * i]->Fill(mass, pairpt, centralityWeight);
+                        }
+                      }
+
                   }
                 }// is selected by cutsetting
               } // end of loop over all cutsettings
@@ -1937,4 +1959,32 @@ void AliAnalysisTaskElectronEfficiencyV2::SetWidthCorrFunction(Detector det, TOb
     // fUsedVars->SetBitNumber(vary, kTRUE);
     // fUsedVars->SetBitNumber(varz, kTRUE);
   }
+}
+
+void AliAnalysisTaskElectronEfficiencyV2::AddPhiVcut(Float_t massLim, Float_t phiVlim){
+
+  applyPhiVcut = kTRUE;
+  phiVmassCut  = massLim;
+  phiVcut      = phiVlim;
+  return;
+}
+
+Float_t AliAnalysisTaskElectronEfficiencyV2::CalcPhiV(const TLorentzVector& part1, const TLorentzVector& part2) const {
+
+  // Copied from AliDielectronPair::PhivPair()
+  TVector3 temp2 = part1.Vect();
+  TVector3 temp1 = part2.Vect();
+  
+  TVector3 u = (temp1 + temp2).Unit();
+  TVector3 v = temp1.Cross(temp2);
+
+  TVector3 w     = u.Cross(v);
+  Double_t w_mag = w.Mag();
+
+  TVector3 ua     = (u.Cross(mag_field)).Unit();
+  Double_t ua_mag = ua.Mag();
+
+  Float_t w_ua = w.Dot(ua)/(w_mag * ua_mag);
+
+  return (Float_t)TMath::ACos(w_ua);
 }
