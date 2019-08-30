@@ -8,6 +8,7 @@ AliAnalysisTaskElectronEfficiencyV2* AddTask_acapon_Efficiency(TString names    
                                                                Bool_t applyPIDcorr          = kTRUE,
                                                                std::string resoFilename     = "", // Leave blank to not use resolution files
                                                                Bool_t DoPairing             = kTRUE,
+                                                               Bool_t applyPhiVcut          = kTRUE,
                                                                Bool_t DoULSLS               = kTRUE,
                                                                Bool_t DeactivateLS          = kTRUE,
                                                                Bool_t DoCocktailWeighting   = kFALSE,
@@ -117,6 +118,8 @@ AliAnalysisTaskElectronEfficiencyV2* AddTask_acapon_Efficiency(TString names    
   // #########################################################
   // Set kinematic cuts for pairing
   task->SetKinematicCuts(minPtCut, maxPtCut, minEtaCut, maxEtaCut);
+
+  task->AddPhiVcut(applyPhiVcut);
 
   // #########################################################
   // #########################################################
