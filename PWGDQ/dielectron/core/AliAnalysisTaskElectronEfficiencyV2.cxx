@@ -163,6 +163,8 @@ void AliAnalysisTaskElectronEfficiencyV2::UserCreateOutputObjects(){
   fUsedVars->SetBitNumber(AliDielectronVarManager::kTPCsignalN, kTRUE);
   fUsedVars->SetBitNumber(AliDielectronVarManager::kNclsTPC, kTRUE);
   fUsedVars->SetBitNumber(AliDielectronVarManager::kNFclsTPCr, kTRUE);
+  fUsedVars->SetBitNumber(AliDielectronVarManager::kImpactParXY, kTRUE);
+  fUsedVars->SetBitNumber(AliDielectronVarManager::kImpactParZ, kTRUE);
   AliDielectronVarManager::SetFillMap(fUsedVars); // currently filled manually in the constructor of this task.
 
 
@@ -1491,6 +1493,8 @@ void    AliAnalysisTaskElectronEfficiencyV2::FillTrackHistograms(AliVParticle* t
   (dynamic_cast<TH1D *>(fOutputListSupportHistos->At(22)))->Fill( (fMC->GetTrack(TMath::Abs(mcTrack->GetMother())))->PdgCode());
   if(fMC->GetCocktailGenerator(TMath::Abs(track->GetLabel()), genname))    (dynamic_cast<TH1D *>(fOutputListSupportHistos->At(23)))->Fill( genname,1);
   else (dynamic_cast<TH1D *>(fOutputListSupportHistos->At(23)))->Fill( "none",1);
+  (dynamic_cast<TH1D *>(fOutputListSupportHistos->At(24)))->Fill(values[AliDielectronVarManager::kImpactParXY]);
+  (dynamic_cast<TH1D *>(fOutputListSupportHistos->At(25)))->Fill(values[AliDielectronVarManager::kImpactParZ]);
 }
 
 
@@ -1674,6 +1678,10 @@ void AliAnalysisTaskElectronEfficiencyV2::CreateSupportHistos()
   // fOutputListSupportHistos->AddAt(hPDGCode_PDGCodeMother, 21);
   TH1D* hMCGenCode = new TH1D("MCGenerator","MCGenerator;#tracks",1, 0, 0);//.,AliDielectronVarManager::kTPCsignalN); //kNclsTPCdEdx
   fOutputListSupportHistos->AddAt(hMCGenCode, 23);
+  TH1D* hDCAxy = new TH1D("DCAxy", "DCA_{xy};DCA_{xy} (cm);#tracks", 400, -2, 2); //AliDielectronVarManager::kImpactParXY
+  TH1D* hDCAz  = new TH1D("DCAz", "DCA_{z};DCA_{z} (cm);#tracks", 600, -4, 4); //AliDielectronVarManager::kImpactParZ
+  fOutputListSupportHistos->AddAt(hDCAxy, 24);
+  fOutputListSupportHistos->AddAt(hDCAz, 25);
 
 }
 
