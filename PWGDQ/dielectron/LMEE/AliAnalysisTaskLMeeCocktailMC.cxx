@@ -952,8 +952,8 @@ void AliAnalysisTaskLMeeCocktailMC::ProcessMCParticles(){
            fmee_orig[hindex[jj]]->Fill(ee_orig.M(), fweight);
            if(fALTweightType == 1||fALTweightType == 11) {fmotherpT_orig[hindex[jj]]->Fill(fmothermt,fweight);
            }else if(fALTweightType == 2||fALTweightType == 22) {fmotherpT_orig[hindex[jj]]->Fill(fmotherpt,fweight);}
-           fpteevsmee_orig[hindex[jj]]->Fill(ee_orig.M(),ee.Pt(), fweight);
-           fphi_orig[hindex[jj]]->Fill(ee_orig.Phi(), fweight);
+           fpteevsmee_orig[hindex[jj]]->Fill(ee_orig.M(),ee_orig.Pt(), fweight);
+           fphi_orig[hindex[jj]]->Fill(TVector2::Phi_0_2pi(ee_orig.Phi()), fweight);
            frap_orig[hindex[jj]]->Fill(ee_orig.Rapidity(), fweight);
            fmee_orig_wALT[hindex[jj]]->Fill(ee_orig.M(), fweight*fwALT);
            if(fALTweightType == 1||fALTweightType == 11) {fmotherpT_orig_wALT[hindex[jj]]->Fill(fmothermt,fweight*fwALT);
@@ -962,7 +962,7 @@ void AliAnalysisTaskLMeeCocktailMC::ProcessMCParticles(){
            if(fpass){
             fmee[hindex[jj]]->Fill(ee.M(), fweight);
             fpteevsmee[hindex[jj]]->Fill(ee.M(),ee.Pt(), fweight);
-            fphi[hindex[jj]]->Fill(ee.Phi(), fweight);
+            fphi[hindex[jj]]->Fill(TVector2::Phi_0_2pi(ee.Phi()), fweight);
             frap[hindex[jj]]->Fill(ee.Rapidity(), fweight);
             fDCAeevsmee->Fill(ee.M(),fpairDCA, fweight);
             fDCAeevsptee->Fill(ee.Pt(),fpairDCA, fweight);
@@ -1082,13 +1082,13 @@ void AliAnalysisTaskLMeeCocktailMC::ProcessMCParticles(){
          for(Int_t jj=0;jj<3;jj++){ // fill the different hindex -> particles
           if(hindex[jj]>-1){
            fmee_orig[hindex[jj]]->Fill(ee_orig.M(), VPHweight);
-           fpteevsmee_orig[hindex[jj]]->Fill(ee_orig.M(),ee.Pt(), VPHweight);
-           fphi_orig[hindex[jj]]->Fill(ee_orig.Phi(), VPHweight);
+           fpteevsmee_orig[hindex[jj]]->Fill(ee_orig.M(),ee_orig.Pt(), VPHweight);
+           fphi_orig[hindex[jj]]->Fill(TVector2::Phi_0_2pi(ee_orig.Phi()), VPHweight);
            frap_orig[hindex[jj]]->Fill(ee_orig.Rapidity(), VPHweight);
            if(fpass){
             fmee[hindex[jj]]->Fill(ee.M(), VPHweight);
             fpteevsmee[hindex[jj]]->Fill(ee.M(),ee.Pt(), VPHweight);
-            fphi[hindex[jj]]->Fill(ee.Phi(), VPHweight);
+            fphi[hindex[jj]]->Fill(TVector2::Phi_0_2pi(ee_orig.Phi()), VPHweight);
             frap[hindex[jj]]->Fill(ee.Rapidity(), VPHweight);
            }
           }
